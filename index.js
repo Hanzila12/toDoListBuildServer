@@ -1,11 +1,15 @@
+var express = require('express');
+var app = express();
+var path = require('path');
+
 const { GraphQLServer } = require('graphql-yoga')
 const mongoose = require('mongoose');
 
 mongoose.connect("mongodb://localhost/test")
 
 const Todo = mongoose.model('Todo', {
- text: String,
- complete: Boolean
+  text: String,
+  complete: Boolean
 });
 
 const typeDefs = `
@@ -26,30 +30,38 @@ const typeDefs = `
 `
 
 const resolvers = {
- Query: {
-  hello: (_, { name }) => `Hello ${name || 'World'}`,
-  todos: () => Todo.find()
- },
- Mutation: {
-  createTodo: async (_, { text }) => {
-   const todo = new Todo({ text, complete: false });
-   await todo.save();
-   return todo;
+  Query: {
+    hello: (_, { name }) => `Hello ${name || 'World'}`,
+    todos: () => Todo.find()
   },
+  Mutation: {
+    createTodo: async (_, { text }) => {
+      const todo = new Todo({ text, complete: false });
+      await todo.save();
+      return todo;
+    },
 
-  updateTodo: async (_, { id, complete }) => {
-   await Todo.findByIdAndUpdate(id, { complete });
-   return true;
+    updateTodo: async (_, { id, complete }) => {
+      await Todo.findByIdAndUpdate(id, { complete });
+      return true;
+    },
+
+    removeTodo: async (_, { id }) => {
+      await Todo.findByIdAndRemove(id);
+      return true;
+    }
   },
-
-  removeTodo: async (_, { id }) => {
-   await Todo.findByIdAndRemove(id);
-   return true;
-  }
- },
 }
+
+
 
 const server = new GraphQLServer({ typeDefs, resolvers })
 mongoose.connection.once("open", function () {
- server.start(() => console.log('Server is running on localhost:4000'))
+  server.start(() => console.log('Server is running on localhost:4000'))
 });
+
+app.use(express.static(path.join(__dirname, 'build')));
+app.get('/', function (req, res) {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
+app.listen(5000);
